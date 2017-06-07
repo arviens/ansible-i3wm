@@ -1,0 +1,43 @@
+---
+- name: Installing Zsh and git
+  apt: pkg=zsh,git state=latest
+  become: sudo
+  register: installation
+
+- name: Is oh-my-zsh downloaded
+  stat:
+    path: ~/.oh-my-zsh
+  register: ohmyzsh_exists
+
+- name: Cloning oh-my-zsh
+  git:
+    repo=https://github.com/robbyrussell/oh-my-zsh
+    dest=~/.oh-my-zsh
+  when: ohmyzsh_exists.stat.isdir is not defined
+
+- name: Creating new ~/.zshrc
+  copy:
+    src=~/.oh-my-zsh/templates/zshrc.zsh-template
+    dest=~/.zshrc
+  register: copy_zsh_config
+  sudo: no
+
+- name: Auto start zsh
+  lineinfile:
+    name: ~/.bashrc
+    line: "exec zsh"
+    state: present
+
+- name: Write neccessary oh my zsh plugins
+  replace:
+    name: ~/.zshrc
+    regexp: 'plugins=\(git\)'
+    replace: 'plugins=(git command-not-found docker gitfast sudo extract colorize history-substring-search)'
+  when: copy_zsh_config|success
+
+- name: Change oh my zsh theme
+  replace:
+    name: ~/.zshrc
+    regexp: 'ZSH_THEME=\"robbyrussell\"'
+    replace: 'ZSH_THEME="bira"'
+  when: copy_zsh_config|success
